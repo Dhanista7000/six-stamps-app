@@ -1,4 +1,4 @@
-import { getUser, getActiveCard, getRewards } from "@/lib/actions";
+import { getUser, getActiveCard, getRewards, getRewardOptions } from "@/lib/actions";
 import { redirect } from "next/navigation";
 import StampCard from "@/components/StampCard";
 
@@ -9,9 +9,10 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const [activeCard, rewards] = await Promise.all([
+  const [activeCard, rewards, rewardOptions] = await Promise.all([
     getActiveCard(),
-    getRewards()
+    getRewards(),
+    getRewardOptions()
   ]);
 
   return (
@@ -25,7 +26,7 @@ export default async function Home() {
       </div>
       
       <div className="w-full h-full flex-1 flex flex-col justify-center mt-8">
-        <StampCard initialCard={activeCard} rewards={rewards} />
+        <StampCard initialCard={activeCard} rewards={rewards} rewardOptions={rewardOptions} />
       </div>
     </main>
   );

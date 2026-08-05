@@ -3,19 +3,21 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Stamp, Trophy } from "lucide-react";
-import { claimStamp } from "@/lib/actions";
+import { claimStamp, mintReward } from "@/lib/actions";
 
 interface StampCardProps {
   initialCard: any;
   rewards: any[];
+  rewardOptions: any[];
 }
 
-export default function StampCard({ initialCard, rewards }: StampCardProps) {
+export default function StampCard({ initialCard, rewards, rewardOptions }: StampCardProps) {
   const [card, setCard] = useState(initialCard);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [rewardLoading, setRewardLoading] = useState(false);
 
   // Derive stamps
   const stamps = card?.card_stamps || [];
@@ -53,6 +55,19 @@ export default function StampCard({ initialCard, rewards }: StampCardProps) {
       setMessage(result.error);
     }
     setLoading(false);
+  };
+
+  const handleMintReward = async (optionId: string) => {
+    setRewardLoading(true);
+    const result = await mintReward(optionId, card.id);
+    if (result.success) {
+      setCard(null); // Reset card to null to show "Enter your first code" again
+      setMessage("Reward successfully added to your account!");
+      setSuccess(true);
+    } else {
+      setMessage(result.error);
+    }
+    setRewardLoading(false);
   };
 
   return (
@@ -121,9 +136,18 @@ export default function StampCard({ initialCard, rewards }: StampCardProps) {
           <Trophy className="w-16 h-16 text-green-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-green-100 mb-2">Card Completed!</h2>
           <p className="text-green-200/80 mb-6">You've unlocked your free Triple-Decker.</p>
-          <button className="w-full bg-green-500 hover:bg-green-400 text-white font-bold py-4 rounded-xl transition-colors shadow-[0_0_20px_rgba(34,197,94,0.3)]">
-            Choose Reward
-          </button>
+          <div className="flex flex-col gap-3">
+            {rewardOptions.map(option => (
+              <button 
+                key={option.id}
+                onClick={() => handleMintReward(option.id)}
+                disabled={rewardLoading}
+                className="w-full bg-green-500 hover:bg-green-400 text-white font-bold py-4 rounded-xl transition-colors shadow-[0_0_20px_rgba(34,197,94,0.3)] disabled:opacity-50"
+              >
+                {rewardLoading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : `Claim ${option.name}`}
+              </button>
+            ))}
+          </div>
         </motion.div>
       ) : (
         <form onSubmit={handleClaim} className="w-full flex flex-col gap-4">

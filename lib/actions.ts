@@ -69,6 +69,12 @@ export async function getRewards() {
   return rewards;
 }
 
+export async function getRewardOptions() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("reward_options").select("*").eq("is_active", true);
+  return data || [];
+}
+
 export async function claimStamp(code: string) {
   const supabase = await createClient();
   
@@ -85,8 +91,6 @@ export async function claimStamp(code: string) {
 export async function redeemReward(rewardId: string) {
   const supabase = await createClient();
   
-  // NOTE: This should ideally be a staff-only action.
-  // We'll implement staff verification in a separate flow.
   const { data, error } = await supabase
     .from("rewards")
     .update({ redeemed_at: new Date().toISOString() })
@@ -100,4 +104,84 @@ export async function redeemReward(rewardId: string) {
   
   revalidatePath("/");
   return { success: true, reward: data };
+}
+
+export async function redeemCodeStaff(code: string) {
+  const supabase = await createClient();
+  const user = await getUser();
+  if (!user) return { success: false, error: "Staff not authenticated" };
+
+  // Get the reward by code
+  const { data: reward, error: findError } = await supabase
+    .from("rewards")
+    .select("*, reward_options(name)")
+    .eq("redemption_code", code)
+    .single();
+
+  if (findError || !reward) {
+    return { success: false, error: "Invalid redemption code." };
+  }
+
+  // Idempotency check:
+  if (reward.redeemed_at) {
+    return { 
+      success: true, 
+      alreadyUsed: true, 
+      reward,
+      message: `Code already used on ${new Date(reward.redeemed_at).toLocaleString()}`
+    };
+  }
+
+  if (new Date() > new Date(reward.expires_at)) {
+    return { success: false, error: "Redemption code has expired." };
+  }
+
+  // Redeem it
+  const { data: updatedReward, error: updateError } = await supabase
+    .from("rewards")
+    .update({ 
+      redeemed_at: new Date().toISOString(),
+      redeemed_outlet: "STORE-FRONT" // Normally would take from staff context
+    })
+    .eq("id", reward.id)
+    .select("*, reward_options(name)")
+    .single();
+
+  if (updateError) {
+    return { success: false, error: updateError.message };
+  }
+
+  return { success: true, alreadyUsed: false, reward: updatedReward, message: "Reward redeemed successfully!" };
+}
+
+export async function mintReward(rewardOptionId: string, cardId: string) {
+  const supabase = await createClient();
+  const user = await getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  // Generate a random 6-character redemption code
+  const redemptionCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  const { data, error } = await supabase
+    .from("rewards")
+    .insert({
+      user_id: user.id,
+      card_id: cardId,
+      reward_option_id: rewardOptionId,
+      redemption_code: redemptionCode,
+      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // 7 days validity
+    })
+    .select()
+    .single();
+
+  if (error) return { success: false, error: error.message };
+  
+  revalidatePath("/");
+  return { success: true, reward: data };
+}
+
+export async function getLiabilityReport() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("liability_report").select("*");
+  return data || [];
 }

@@ -1,0 +1,14 @@
+--- lib/actions.ts
++++ lib/actions.ts
+@@ -62,6 +62,13 @@
+   return rewards;
+ }
+ 
++export async function getRewardOptions() {
++  const supabase = await createClient();
++  const { data } = await supabase.from("reward_options").select("*").eq("is_active", true);
++  return data || [];
++}
++
+ export async function claimStamp(code: string) {
+   const supabase = await createClient();

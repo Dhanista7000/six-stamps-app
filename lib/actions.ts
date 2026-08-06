@@ -159,25 +159,17 @@ export async function mintReward(rewardOptionId: string, cardId: string) {
   const user = await getUser();
   if (!user) return { success: false, error: "Not authenticated" };
 
-  // Generate a random 6-character redemption code
   const redemptionCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
 
-  const { data, error } = await supabase
-    .from("rewards")
-    .insert({
-      user_id: user.id,
-      card_id: cardId,
-      reward_option_id: rewardOptionId,
-      redemption_code: redemptionCode,
-      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // 7 days validity
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("mint_reward", {
+    p_card_id: cardId,
+    p_reward_option_id: rewardOptionId,
+    p_redemption_code: redemptionCode,
+    p_expires_at: expiresAt
+  });
 
   if (error) return { success: false, error: error.message };
-  
-  // Mark the card's reward as claimed
-  await supabase.from("cards").update({ reward_claimed: true }).eq("id", cardId);
 
   revalidatePath("/");
   return { success: true, reward: data };

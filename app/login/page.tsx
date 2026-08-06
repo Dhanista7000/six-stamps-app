@@ -20,7 +20,13 @@ export default function LoginPage() {
 
     let error;
     if (type === "signup") {
-      const res = await supabase.auth.signUp({ email, password });
+      const res = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        }
+      });
       error = res.error;
       if (!error && !res.data.session) {
         setMessage("Check your email for the confirmation link.");

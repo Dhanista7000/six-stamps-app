@@ -46,7 +46,7 @@ export async function getActiveCard() {
     .from("cards")
     .select("*, card_stamps(*)")
     .eq("user_id", user.id)
-    .eq("is_completed", false)
+    .eq("reward_claimed", false)
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
@@ -176,8 +176,17 @@ export async function mintReward(rewardOptionId: string, cardId: string) {
 
   if (error) return { success: false, error: error.message };
   
+  // Mark the card's reward as claimed
+  await supabase.from("cards").update({ reward_claimed: true }).eq("id", cardId);
+
   revalidatePath("/");
   return { success: true, reward: data };
+}
+
+export async function signOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
 }
 
 export async function getLiabilityReport() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Stamp, Trophy } from "lucide-react";
 import { claimStamp, mintReward } from "@/lib/actions";
@@ -18,6 +18,11 @@ export default function StampCard({ initialCard, rewards, rewardOptions }: Stamp
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [rewardLoading, setRewardLoading] = useState(false);
+
+  // Sync state with server props when they change
+  useEffect(() => {
+    setCard(initialCard);
+  }, [initialCard]);
 
   // Derive stamps
   const stamps = card?.card_stamps || [];
